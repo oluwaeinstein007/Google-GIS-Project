@@ -40,10 +40,16 @@ class GoogleAPIController extends Controller
                         echo "Origin: ({$origins[$rowIndex]['lat']}, {$origins[$rowIndex]['lng']}), Destination: ({$destinations[$rowIndex]['lat']}, {$destinations[$rowIndex]['lng']})\n";
                         echo "Distance: $distance\n";
                         echo "Duration: $duration\n";
+                        // return response()->json([
+                        //     'distance' => $distance,
+                        //     'duration' => $duration
+                        // ]);
                     }
                 }
             } else {
-                echo "No rows found in the response.\n";
+                return response()->json([
+                    'error' => 'No rows found in the response.',
+                ], 404);
             }
         } catch (\Exception $e) {
             return response()->json([

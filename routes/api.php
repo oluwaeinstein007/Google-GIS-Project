@@ -26,3 +26,8 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+//route for pollen
+Route::get('/pollen', function () {
+    return view('PollenMap');
+});
+
