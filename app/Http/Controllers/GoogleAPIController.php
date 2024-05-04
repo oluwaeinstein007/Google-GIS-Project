@@ -98,4 +98,57 @@ class GoogleAPIController extends Controller
             ], $e->getCode());
         }
     }
+
+
+    public function getForecastWithDataHandling(Request $request)
+    {
+        $latitude = $request->latitude;
+        $longitude = $request->longitude;
+        $apiKey = env('GOOGLE_MAPS_API_KEY');
+
+        $client = new \GuzzleHttp\Client();
+
+        $url = "https://maps.googleapis.com/maps/api/pollen/v2/forecast?location={$latitude},{$longitude}&key={$apiKey}";
+
+        try {
+            $response = $client->get($url);
+            $data = json_decode($response->getBody(), true);
+            return response()->json($data);
+                // Process the pollen data here
+                $processedData = $this->processPollenData($data);
+
+                return response()->json($processedData);
+            } catch (\GuzzleHttp\Exception\ClientException $e) {
+                return response()->json([
+                'error' => $e->getMessage(),
+                ], $e->getCode());
+            } catch (\Exception $e) {
+                return response()->json([
+                'error' => 'An unexpected error occurred.',
+                ], 500);
+            }
+    }
+
+    public function processPollenData($data)
+    {
+
+    // Extract pollen types and risk levels from the response
+    $pollen_types = [];
+    $risk_levels = [];
+    foreach ($data['pollen_types'] as $pollen_type) {
+        $pollen_types[] = $pollen_type['type'];
+        $risk_levels[] = $pollen_type['risk_level'];
+    }
+
+    // Create a processed data dictionary
+    $processed_data = [
+        'pollen_types' => $pollen_types,
+        'risk_levels' => $risk_levels,
+    ];
+
+    return $processed_data;
+    }
+
+
+
 }
