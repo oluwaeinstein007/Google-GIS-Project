@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 use GuzzleHttp\Client;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 class GoogleAPIController extends Controller
 {
@@ -148,6 +149,139 @@ class GoogleAPIController extends Controller
 
     return $processed_data;
     }
+
+
+    //Get distances and durations of each n origin to m destinations
+    public function getDistTimeMatrix(Request $request){
+        $origins = $request->origins;
+        $destinations = $request->destinations;
+        // Replace YOUR_API_KEY with your actual Google Maps API key
+        $apiKey = env('GOOGLE_MAPS_API_KEY');
+        $client = new Client();
+        $url = 'https://maps.googleapis.com/maps/api/distancematrix/json';
+
+        try {
+            $responseData = [];
+
+            foreach ($origins as $originIndex => $origin) {
+                foreach ($destinations as $destinationIndex => $destination) {
+                    $response = $client->get($url, [
+                        'query' => [
+                            'origins' => $origin['lat'] . ',' . $origin['lng'],
+                            'destinations' => $destination['lat'] . ',' . $destination['lng'],
+                            'units' => 'metric', // or 'imperial' depending on your preference
+                            'key' => $apiKey
+                        ]
+                    ]);
+
+                    $distanceDurationData = json_decode($response->getBody(), true);
+                    $responseData[$originIndex][$destinationIndex]['distance'] = $distanceDurationData['rows'][0]['elements'][0]['distance']['text'];
+                    $responseData[$originIndex][$destinationIndex]['duration'] = $distanceDurationData['rows'][0]['elements'][0]['duration']['text'];
+                    $responseData[$originIndex][$destinationIndex]['origin'] = $origin;
+                    $responseData[$originIndex][$destinationIndex]['destination'] = $destination;
+                }
+            }
+
+
+        Excel::store($responseData, 'distance_matrix.xlsx');
+
+            return response()->json($responseData);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], $e->getCode());
+        }
+    }
+    // public function getDistTimeMatrix(Request $request)
+    // {
+    //     $origins = $request->origins;
+    //     $destinations = $request->destinations;
+    //     $apiKey = env('GOOGLE_MAPS_API_KEY');
+
+    //     try {
+    //         $responseData = $this->calculateDistances($origins, $destinations, $apiKey);
+
+    //         // Check if responseData is empty before saving
+    //         if (!empty($responseData)) {
+    //             Excel::store($responseData, 'distance_matrix.xlsx');
+    //             return response()->json([
+    //                 'message' => 'Distance matrix calculated and saved to excel file successfully.',
+    //                 'data' => $responseData,
+    //             ]);
+    //         } else {
+    //             return response()->json([
+    //                 'error' => 'No data available to save in excel file.',
+    //             ]);
+    //         }
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'error' => $e->getMessage(),
+    //         ], $e->getCode());
+    //     }
+    // }
+
+    // private function calculateDistances($origins, $destinations, $apiKey)
+    // {
+    //     $client = new Client();
+    //     $url = 'https://maps.googleapis.com/maps/api/distancematrix/json';
+
+    //     $responseData = [];
+
+    //     foreach ($origins as $originIndex => $origin) {
+    //         foreach ($destinations as $destinationIndex => $destination) {
+    //             $response = $client->get($url, [
+    //                 'query' => [
+    //                     'origins' => $origin['lat'] . ',' . $origin['lng'],
+    //                     'destinations' => $destination['lat'] . ',' . $destination['lng'],
+    //                     'units' => 'metric', // or 'imperial' depending on your preference
+    //                     'key' => $apiKey
+    //                 ]
+    //             ]);
+
+    //             $distanceDurationData = json_decode($response->getBody(), true);
+
+    //             // Check if data exists before adding to responseData
+    //             if (isset($distanceDurationData['rows'][0]['elements'][0])) {
+    //                 $responseData[$originIndex][$destinationIndex]['distance'] = $distanceDurationData['rows'][0]['elements'][0]['distance']['text'];
+    //                 $responseData[$originIndex][$destinationIndex]['duration'] = $distanceDurationData['rows'][0]['elements'][0]['duration']['text'];
+    //                 $responseData[$originIndex][$destinationIndex]['origin'] = $origin;
+    //                 $responseData[$originIndex][$destinationIndex]['destination'] = $destination;
+    //             }
+    //         }
+    //     }
+
+    //     return $responseData;
+    // }
+
+
+
+
+    //Get optimal origin
+    public function getOptimalOrigin(Request $request) {
+        $responseData = $this->getDistTimeMatrix($request)->original;
+
+        $optimalOrigin = null;
+        $minTotalDuration = PHP_INT_MAX;
+
+        // Calculate total duration from each origin to all destinations
+        foreach ($responseData as $originData) {
+            $totalDuration = 0;
+            foreach ($originData as $destinationData) {
+                $totalDuration += strtotime($destinationData['duration']);
+            }
+            if ($totalDuration < $minTotalDuration) {
+                $minTotalDuration = $totalDuration;
+                $optimalOrigin = $originData[0]['origin'];
+            }
+        }
+
+        return response()->json([
+            'optimal_origin' => $optimalOrigin,
+            'min_total_duration' => $minTotalDuration,
+        ]);
+    }
+
+
 
 
 
