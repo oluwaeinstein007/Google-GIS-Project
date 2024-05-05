@@ -21,6 +21,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::get('/getDistancesAndDurations', [GoogleAPIController::class, 'getDistancesAndDurations'])->name('getDistancesAndDurations');
 Route::get('/getForecast', [GoogleAPIController::class, 'getForecast'])->name('getForecast');
+Route::get('/getDistTimeMatrix', [GoogleAPIController::class, 'getDistTimeMatrix'])->name('getDistTimeMatrix');
+Route::get('/getOptimalOrigin', [GoogleAPIController::class, 'getOptimalOrigin'])->name('getOptimalOrigin');
 //route for welcome blade
 Route::get('/', function () {
     return view('welcome');
