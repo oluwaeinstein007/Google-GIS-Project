@@ -81,7 +81,6 @@ class GoogleAPIController extends Controller
         $latitude = $request->latitude;
         $longitude = $request->longitude;
         $apiKey = env('GOOGLE_MAPS_API_KEY');
-        // $apiKey = 'AIzaSyCFS0E7BkA80WCBP72icNJF2qJHukH33BI';
 
         $client = new Client();
 
